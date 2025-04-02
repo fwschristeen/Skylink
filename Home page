@@ -1,0 +1,180 @@
+import 'package:drone_user_app/features/auth/bloc/auth_bloc.dart';
+import 'package:drone_user_app/features/auth/models/user_model.dart';
+import 'package:drone_user_app/features/home/widgets/home_grid_item.dart';
+import 'package:drone_user_app/features/service_center/screens/my_service_centers_screen.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+class HomePage extends StatelessWidget {
+  const HomePage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Row(
+          spacing: 16,
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.flight_takeoff, size: 32, color: Colors.black),
+            ),
+            const Text('Skylink'),
+          ],
+        ),
+        actions: [
+          BlocBuilder<AuthBloc, AuthState>(
+            builder: (context, state) {
+              if (state is Authenticated) {
+                return FutureBuilder<UserModel?>(
+                  future: context.read<AuthBloc>().getUserData(state.user.uid),
+                  builder: (context, snapshot) {
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 16.0),
+                      child: GestureDetector(
+                        onTap: () {
+                          Navigator.pushNamed(context, '/profile');
+                        },
+                        child: CircleAvatar(
+                          radius: 18,
+                          backgroundColor: Theme.of(
+                            context,
+                          ).primaryColor.withAlpha(200),
+                          backgroundImage:
+                              snapshot.hasData &&
+                                      snapshot.data?.imageUrl != null
+                                  ? NetworkImage(snapshot.data!.imageUrl!)
+                                  : null,
+                          child:
+                              (!snapshot.hasData ||
+                                      snapshot.data?.imageUrl == "")
+                                  ? const Icon(Icons.person)
+                                  : null,
+                        ),
+                      ),
+                    );
+                  },
+                );
+              }
+              return const SizedBox.shrink();
+            },
+          ),
+        ],
+      ),
+      body: BlocBuilder<AuthBloc, AuthState>(
+        builder: (context, state) {
+          print('Current AuthBloc State: $state');
+          if (state is Authenticated) {
+            return FutureBuilder<UserModel?>(
+              key: ValueKey('user-data-${state.user.uid}'),
+              future: context.read<AuthBloc>().getUserData(state.user.uid),
+              builder: (context, snapshot) {
+                print('Snapshot state: ${snapshot.connectionState}');
+                print('Snapshot has data: ${snapshot.hasData}');
+
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                if (snapshot.hasData) {
+                  UserModel user = snapshot.data!;
+                  return _buildHomeForRole(context, user);
+                }
+
+                return const Center(
+                  child: Text('An error occurred while fetching user data'),
+                );
+              },
+            );
+          }
+          return const Center(child: CircularProgressIndicator());
+        },
+      ),
+    );
+  }
+
+  Widget _buildHomeForRole(BuildContext context, UserModel user) {
+    switch (user.role) {
+      case 'Customer':
+        return _buildCustomerHome(context);
+      case 'Pilot':
+        return _buildPilotHome(context);
+      case 'Service Center':
+        return _buildServiceCenterHome(context);
+      default:
+        return const Center(child: Text('Unknown user role'));
+    }
+  }
+
+  Widget _buildCustomerHome(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          HomeGridItem(
+            title: 'Find Service Centers',
+            imagePath: "assets/images/find_service_center.jpeg",
+            onTap: () => Navigator.pushNamed(context, '/service-centers'),
+          ),
+          HomeGridItem(
+            title: 'Marketplace',
+            imagePath: "assets/images/marketplace.jpg",
+            onTap: () => Navigator.pushNamed(context, '/marketplace'),
+          ),
+          HomeGridItem(
+            title: 'Rent a Drone',
+            imagePath: "assets/images/rent_out_drone.jpg",
+            onTap: () => Navigator.pushNamed(context, '/rent-drone'),
+          ),
+          HomeGridItem(
+            title: 'Hire a Pilot',
+            imagePath: "assets/images/hire_pilot.jpg",
+            onTap: () => Navigator.pushNamed(context, '/pilots'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPilotHome(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+
+        children: [
+          HomeGridItem(
+            title: 'Find Service Centers',
+            imagePath: "assets/images/find_service_center.jpeg",
+            onTap: () => Navigator.pushNamed(context, '/service-centers'),
+          ),
+          HomeGridItem(
+            title: 'Marketplace',
+            imagePath: "assets/images/marketplace.jpg",
+            onTap: () => Navigator.pushNamed(context, '/marketplace'),
+          ),
+          HomeGridItem(
+            title: 'My Listings',
+            imagePath: "assets/images/my_listings.png",
+            onTap: () => Navigator.pushNamed(context, '/my-listings'),
+          ),
+          HomeGridItem(
+            title: 'Rent Out Drone',
+            imagePath: "assets/images/rent_out_drone.jpg",
+            onTap: () => Navigator.pushNamed(context, '/rent-out'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildServiceCenterHome(BuildContext context) {
+    return MyServiceCentersScreen();
+  }
+}
